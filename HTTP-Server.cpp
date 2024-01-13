@@ -66,6 +66,7 @@ string httpDate() {
     return str;
 }
 
+// Eventually handle POST request
 void parseHTTPRequest(){
 
 }
@@ -85,6 +86,7 @@ string generateHTTPResponse(int STATUS_CODE, string CONTENT_TYPE = "text/html", 
      */
     ostringstream response_stream;
     response_stream << "HTTP/1.0 ";
+    // Identify the proper status code response
     if (STATUS_CODE == 200) {
         response_stream << "200 OK";
     } else if (STATUS_CODE == 404) {
@@ -98,6 +100,7 @@ string generateHTTPResponse(int STATUS_CODE, string CONTENT_TYPE = "text/html", 
     }else {
         response_stream << "500 INTERNAL SERVER ERROR";
     }
+    // Finish the rest of the HTTP response. 
     response_stream << "\r\n"
                     << "Date: " << httpDate() << "\r\n"
                     << "Server: " << SERVER_VERSION << "\r\n"
@@ -108,6 +111,9 @@ string generateHTTPResponse(int STATUS_CODE, string CONTENT_TYPE = "text/html", 
 }
 
 ifstream openFile(const std::string& path, streamsize& file_size) {
+    /*
+    * Open a file within the web server directory and return the file handle. 
+    */
     std::string file_name = WEB_SERVE_PATH + "/" + path;
     std::ifstream file(file_name, std::ios::binary);
     if (!file.is_open()) {
@@ -163,10 +169,10 @@ void handleHTTPClient(int client_socket) {
     //Handle no param / default path 
     if (path == "/." || path == "/" || path == ""){
         path = "index.html";
-    } else if (path == "/teapot") {
+    } else if (path.find("teapot")) {
         string response = generateHTTPResponse(418);
         send(client_socket, response.c_str(), response.size(), 0);
-        return; 
+        return;
     }
 
     // Open File
@@ -193,7 +199,7 @@ void handleHTTPClient(int client_socket) {
         return;
     }
 
-
+    // This eventually needs to be identified by MIME type instead of file name. 
     std::transform(path.begin(), path.end(), path.begin(), ::tolower);
     string content_type = "text/html";  // Default value
     if (path.find(".js") != string::npos) {
@@ -204,7 +210,7 @@ void handleHTTPClient(int client_socket) {
         content_type = "image/jpeg";
     } else if (path.find(".png") != string::npos) {
         content_type = "image/png";
-    } 
+    }
 
     // Send HTTP response
     if (file.is_open()) {
@@ -230,8 +236,7 @@ void handleHTTPClient(int client_socket) {
         string response = generateHTTPResponse(404);
         send(client_socket, response.c_str(), response.size(), 0);
     }
-
-    close(client_socket);  // Close the client socket
+    close(client_socket);
 }
 
 int main() {
