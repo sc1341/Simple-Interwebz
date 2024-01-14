@@ -1,8 +1,6 @@
 # Simple-Interwebz
-A simple HTTP Server I wrote to host my blog.
 
-So far, the server supports GET requests to handle my static HTML blog. The blog is then served behind a Cloudflare tunnel.
-
+A simple HTTP Server I wrote to host my blog. It is intended to serve static content, and not do anything too fancy. Just handles basic GET requests and follows the HTTP standards to properly retrieve content. 
 
 # Disclaimer 
 

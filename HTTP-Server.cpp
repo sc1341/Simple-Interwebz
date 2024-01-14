@@ -1,6 +1,6 @@
 /*
 * Simple-InterWebz-v1.0
-* Basic custom Web Server that is intended to server a basic static HTML blog via GET requests. 
+* Basic webserver implementation that is intended to server a basic static HTML site via GET requests. 
 */
 
 #include <algorithm>
@@ -57,6 +57,10 @@ int log(string message){
 }
 
 string httpDate() {
+    /**
+     * Returns HTTP date format based on system clock time. 
+     * :return: string 
+    */
     auto now = chrono::system_clock::now();
     auto in_time_t = chrono::system_clock::to_time_t(now);
     struct tm buf;
@@ -72,6 +76,9 @@ void parseHTTPRequest(){
 }
 
 streamsize getFileSize(const string& file_name) {
+    /*
+    * Get the file size of the file to be sent for HTTP response. 
+    */
     try {
         return fs::file_size(file_name);
     } catch (const fs::filesystem_error& err) {
@@ -129,6 +136,9 @@ ifstream openFile(const std::string& path, streamsize& file_size) {
 
 
 void handleHTTPClient(int client_socket) {
+    /*
+    * Handles an HTTP client connection by reading input and preparing proper response. 
+    */
     char buffer[BUFFER_SIZE];
     std::string request;
     std::ostringstream response_stream;
@@ -153,6 +163,7 @@ void handleHTTPClient(int client_socket) {
         return;
     }
     
+    // Protect against unauthorized directory traversal 
     if ((path.find("../") != std::string::npos) || (path.find("..\\") != std::string::npos)) {
         size_t pos;
         while ((pos = path.find("../")) != std::string::npos) {
@@ -169,7 +180,7 @@ void handleHTTPClient(int client_socket) {
     //Handle no param / default path 
     if (path == "/." || path == "/" || path == ""){
         path = "index.html";
-    } else if (path.find("teapot")) {
+    } else if (path.find("teapot")) { // lolll just for funz 
         string response = generateHTTPResponse(418);
         send(client_socket, response.c_str(), response.size(), 0);
         return;
@@ -200,6 +211,7 @@ void handleHTTPClient(int client_socket) {
     }
 
     // This eventually needs to be identified by MIME type instead of file name. 
+    // Gets the Content-Type attribute for the browser so it can handle images. 
     std::transform(path.begin(), path.end(), path.begin(), ::tolower);
     string content_type = "text/html";  // Default value
     if (path.find(".js") != string::npos) {
@@ -230,17 +242,20 @@ void handleHTTPClient(int client_socket) {
             }
             send(client_socket, file_buffer, file.gcount(), 0);
         }
-        file.close();  // Close the file after reading
+        file.close();  // Close the file after reading!
     } else {
         cerr << "Could not open file: " << path << endl;
         string response = generateHTTPResponse(404);
         send(client_socket, response.c_str(), response.size(), 0);
     }
+    // Close the socket connection, do not do this again in the main loop!
     close(client_socket);
 }
 
 int main() {
     std::signal(SIGINT, signalHandler);
+    cout << SERVER_VERSION << endl;
+    cout << "Starting webserver on port " << LISTEN_PORT << " serving static content at: " << WEB_SERVE_PATH << endl;
     if (chdir(WEB_SERVE_PATH.c_str()) != 0) {
         perror("chdir failed. Please check the path value!");
         return 1;
@@ -271,7 +286,7 @@ int main() {
         sockaddr_in client_addr;
         socklen_t client_addr_len = sizeof(client_addr);
         if (getpeername(client_socket, (struct sockaddr*)&client_addr, &client_addr_len) == -1) {
-            std::cerr << "Failed to get client address." << std::endl;
+            std::cerr << "Failed to get origin client IP address." << std::endl;
         } else {
             std::cout << "Client IP: " << inet_ntoa(client_addr.sin_addr) << std::endl;
         }
@@ -279,6 +294,7 @@ int main() {
             std::cerr << "Could not accept client." << std::endl;
             continue;
         }
+        // pass the socket to the HTTP client. 
         handleHTTPClient(client_socket);
     }
     std::cout << "Shutting down server..." << std::endl;
